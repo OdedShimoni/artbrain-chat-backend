@@ -1,0 +1,39 @@
+chats: {
+	id: Number,
+	ip: IP
+}
+messages: {
+	id: Number,
+	chat_id: Number,
+	sent_by_support: Boolean, // or maybe enum
+	text: String
+}
+
+Example:
+
+messages in chat 5:
+
+{
+	id: 1,
+	chat_id: 5,
+	sent_by_support: false,
+	text: "Hey whats up?"
+},
+{
+	id: 2,
+	chat_id: 5,
+	sent_by_support: true,
+	text: "Great how can I help?"
+},
+{
+	id: 3,
+	chat_id: 5,
+	sent_by_support: false,
+	text: "I have a problem"
+},
+{
+	id: 4,
+	chat_id: 5,
+	sent_by_support: false,
+	text: "How can I do something which will take you one year but pay super cheap and make a thousand changes along the way?"
+},
