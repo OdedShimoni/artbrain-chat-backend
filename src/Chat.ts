@@ -1,25 +1,27 @@
-const socketIo = require("socket.io");
-const deleteByVal = require('./helpers/deleteByVal');
-const MessagesAPI = require('./MessagesAPI');
+import { Server as SocketServer, Socket } from "socket.io";
+import http from 'http';
+import { Message } from "./common/types";
+import deleteByVal from './common/deleteByVal';
+import MessagesAPI from './MessagesAPI';
 
 class Chat {
-    server;
-    io;
-    visitors = [];
-    messagesClient = new MessagesAPI;
+    server: http.Server;
+    io?: SocketServer;
+    visitors: Map<string, string> = new Map;
+    messagesClient: MessagesAPI = new MessagesAPI;
 
-    constructor(server) {
+    constructor(server: any) {
         this.server = server;
     }
     
     init() {
         const { server } = this;
-        const corsAllowedOrigins = 
+        const corsAllowedOrigins: any = 
             ( (process.env.NODE_ENV === 'development')
                 ? '*'
                 : [process.env.CLIENT_VISITOR_URI, process.env.CLIENT_ADMIN_URI]
             );
-        this.io = socketIo(
+        this.io = new SocketServer(
             server, {
             cors: {
                 origin: corsAllowedOrigins,
@@ -31,7 +33,7 @@ class Chat {
         });
     }
     
-    sendConversationAndFunnel(socket) {
+    sendConversationAndFunnel(socket: Socket): void {
         socket.on('support entered', () => {
             this.sendAllPreviousConversationsTo(socket);
         });
@@ -44,7 +46,7 @@ class Chat {
         this.funnel(socket);
     }
 
-    funnel(socket) {
+    funnel(socket: Socket): void {
         /**
          * Whenever receiving a message from client,
          * sends it to the other client and saves to messages API
@@ -52,7 +54,7 @@ class Chat {
         const { io, visitors, messagesClient } = this;
         
         socket.on('visitor sent message', data => {
-            const message = {
+            const message: Message = {
                 ip: socket.handshake.address,
                 text: data.text,
                 sentBySupport: false
@@ -62,25 +64,23 @@ class Chat {
         });
     
         socket.on('support sent message', data => {
-            const message = {
+            const message: Message = {
                 ip: data.ip,
                 text: data.text,
                 sentBySupport: true
             };
 
-            const socketId = visitors[data.ip] || -1;
-            io
-                .to(socketId)
-                .emit('support sent message', message); // emit to relevant frontend visitor
-                messagesClient.save(message)
+            const socketId: string = visitors.get(data.ip) || 'none';
+            io?.to(socketId).emit('support sent message', message); // emit to relevant frontend visitor
+            messagesClient.save(message)
         });
     }
 
-    logVisitorFrom(socket) {
+    logVisitorFrom(socket: Socket) {
         /**
          * Follow current visitor status
          */
-        this.visitors[socket.handshake.address] = socket.id;
+        this.visitors.set(socket.handshake.address, socket.id);
         console.log("Visitor connected: visitors is ", this.visitors);
     
         socket.on("disconnect", () => {
@@ -89,23 +89,19 @@ class Chat {
         });
     }
     
-    sendPreviousConversationTo(socket) {
+    async sendPreviousConversationTo(socket: Socket) {
         const { messagesClient } = this;
-        const visitor_ip = socket.handshake.address;
-        messagesClient.getAllOf(visitor_ip)
-            .then(prevMessages => {
-                socket.emit('previous messages downloaded', prevMessages); // emit to frontend visitor
-        });
+        const visitorIp = socket.handshake.address;
+        const previousClientMessages = await messagesClient.getAllOf(visitorIp);
+        socket.emit('previous messages downloaded', previousClientMessages); // emit to frontend visitor
     }
 
-    sendAllPreviousConversationsTo(socket) {
+    async sendAllPreviousConversationsTo(socket: Socket) {
         const { messagesClient } = this;
-        messagesClient.getAll()
-                .then(prevMessages => {
-                    socket.emit('previous messages downloaded', prevMessages); // emit to frontend visitor
-            });
+        const allPreviousMessages = await messagesClient.getAll();
+        socket.emit('previous messages downloaded', allPreviousMessages); // emit to frontend visitor
     }
 
 }
 
-module.exports = Chat;
+export default Chat;

@@ -1,4 +1,5 @@
 const gqlRequest = require("graphql-request").request;
+import { Message } from './common/types'
 
 class MessagesAPI {
     getAll = async () => {
@@ -15,7 +16,7 @@ class MessagesAPI {
         return response.messageMany;
     }
 
-    getAllOf = async (ip) => {
+    getAllOf = async (ip: string) => {
         const gqlQuery = `query {
             messageMany(filter: {
             visitor_ip: "${ip}"
@@ -31,7 +32,7 @@ class MessagesAPI {
         return response.messageMany;
     }
 
-    save = async (message) => {
+    save = async (message: Message) => {
         const gqlQuery = `mutation {
             messageCreateOne(
               record: {
@@ -48,4 +49,4 @@ class MessagesAPI {
     }
 }
 
-module.exports = MessagesAPI;
+export default MessagesAPI;
